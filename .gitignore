@@ -1,0 +1,60 @@
+# ---------- 密钥与本机配置（绝不入库） ----------
+.env
+.env.local
+.env.*.local
+aliases.json
+prefs.json
+speakers.json
+mood.json
+daily_report_state.json
+qzone_auto.json
+qzone_limits.json
+hot_trends.json
+group_style.json
+
+# ---------- 运行时数据（统一放 data/） ----------
+data/
+memory.db*
+usage.db*
+group_log.db*
+style_pairs.db*
+image_cache.db*
+
+# ---------- 日志 / 进程 / 停机标记 ----------
+*.log
+*.log.1
+bot.pid
+bot.lock
+stop.*
+napcat.pid
+napcat-kicked.txt
+napcat-err.txt*
+napcat-log.txt*
+napcat-watchdog.*
+
+# ---------- 备份文件 ----------
+*.bak-*
+*.orig
+*.rej
+*~
+backups/
+
+# ---------- 缓存与构建产物 ----------
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.cache/
+cache/
+.ruff_cache/
+.pytest_cache/
+pytest-cache-files-*/
+
+# ---------- 大体量 / 可重建资产 ----------
+# 这些是跑起来才有的东西，仓库里不放
+models/
+napcat/
+stickers/
+
+# ---------- 部署标记 ----------
+.deployed_commit
