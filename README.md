@@ -39,7 +39,7 @@ QQ 客户端（小号） ── SnowLuma ── OneBot 11 ── run.py ── D
 
 | 角色 | 是什么 | 谁来做 |
 |---|---|---|
-| **协议端** | 冒充 QQ 客户端收发消息，翻译成标准协议 | [SnowLuma](https://github.com/SnowLuma) 2.x（Docker 里跑 Linux QQ） |
+| **协议端** | 冒充 QQ 客户端收发消息，翻译成标准协议 | SnowLuma 2.x（Docker 里跑 Linux QQ） |
 | **协议** | 一套约定好的 JSON 格式（收事件 / 发动作） | OneBot 11 |
 | **业务逻辑** | 判断该不该回、调模型、发回去 | 本仓库的 `run.py` |
 
