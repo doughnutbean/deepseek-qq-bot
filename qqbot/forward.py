@@ -29,7 +29,7 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
-# 单次 get_forward_msg 的超时（秒）。转发是本地 NapCat 数据，不该等太久。
+# 单次 get_forward_msg 的超时（秒）。转发是本地协议端数据，不该等太久。
 CALL_TIMEOUT = 10.0
 
 # 记录里她自己发的节点行首标记。别的号也可能叫「大肥鱼」/自称「本鱼」，

@@ -1,7 +1,7 @@
 """QQ 空间（说说）读写。
 
 走 Qzone 的网页接口：
-- cookie 由 NapCat 的 `get_cookies` 提供（domain=user.qzone.qq.com）
+- cookie 由协议端的 `get_cookies` 提供（domain=user.qzone.qq.com）
 - g_tk 直接用返回的 `bkn`，不用自己从 skey 算
 - 发说说前要先从个人主页取 `qzonetoken`
 
@@ -42,7 +42,7 @@ COMMENT_URL = (
     "/cgi-bin/emotion_cgi_re_feeds"
 )
 # 删除没有走网页接口：emotion_cgi_delete_v6 缺 fid，怎么传都 -10004。
-# 改成调 NapCat 的 delete_qzone_msg，见 Qzone.delete()
+# 改成调协议端的 delete_qzone_msg，见 Qzone.delete()
 PUBLISH_URL = (
     "https://user.qzone.qq.com/proxy/domain/taotao.qzone.qq.com"
     "/cgi-bin/emotion_cgi_publish_v6"
@@ -98,7 +98,7 @@ def _bkn_from_skey(skey: str) -> int:
 
 
 def _as_dict(cookies: Any) -> dict[str, str]:
-    """NapCat 不同版本返回的 cookie 可能是 dict，也可能是 `a=b; c=d` 字符串。"""
+    """协议端不同版本返回的 cookie 可能是 dict，也可能是 `a=b; c=d` 字符串。"""
     if isinstance(cookies, dict):
         return {str(k): str(v) for k, v in cookies.items()}
     out: dict[str, str] = {}
@@ -210,7 +210,7 @@ class Qzone:
         data = (resp or {}).get("data") or {}
         cookies = _as_dict(data.get("cookies"))
         if not cookies:
-            raise QzoneError("拿不到 Qzone cookie：小号可能没登录过空间，或 NapCat 版本不支持")
+            raise QzoneError("拿不到 Qzone cookie：小号可能没登录过空间，或协议端版本不支持")
 
         # qzone 的代理接口（说说列表/发说说）认的是 p_skey，不是 skey。
         # NapCat 会给带 p_skey 的 cookie 串；SnowLuma 只给通用那串（没有 p_skey），
@@ -329,7 +329,7 @@ class Qzone:
     async def delete(self, tid: str, fid: str = "") -> dict[str, Any]:
         """删一条说说。
 
-        走 NapCat 的 `delete_qzone_msg` —— 网页那个 `emotion_cgi_delete_v6`
+        走协议端的 `delete_qzone_msg` —— 网页那个 `emotion_cgi_delete_v6`
         怎么传都报 `-10004 参数错误`（它的 fid 在 feed 里根本拿不到）。
         tid 从 feed_list() 里取，别手写。
         """

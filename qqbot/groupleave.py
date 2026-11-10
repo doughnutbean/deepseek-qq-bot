@@ -62,5 +62,5 @@ def _human_error(exc: Exception) -> str:
     """异常 → 一句能直接发出去的话；不把栈和内部路径甩给模型。"""
     detail = str(exc or "").strip()
     if not detail:
-        return "NapCat 没给原因"
+        return "协议端没给原因"
     return detail.splitlines()[0][:120]

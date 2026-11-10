@@ -3,7 +3,7 @@
 双击 `停止机器人.bat` 时，`tools/stop_bot.py` 会落一个 `stop.request`；
 这里的后台任务看到请求后：
 
-1. 向 NapCat 要 `get_group_list`（机器人当前所在的**每一个**群）；
+1. 向协议端要 `get_group_list`（机器人当前所在的**每一个**群）；
 2. 每个群发同一句固定文案（不走模型，0 token，也不受潜水/生气影响）；
 3. 写 `stop.done` 回执，然后通知 `run.py` 退出（退出码 4）。
 
@@ -70,7 +70,7 @@ def clear_stop_files() -> None:
 async def fetch_groups(onebot, *, timeout: float = 15.0) -> list[dict[str, Any]]:
     """取机器人所在的全部群。
 
-    以 NapCat 的 `get_group_list` 为准；坏的/重复的条目直接跳过，
+    以协议端的 `get_group_list` 为准；坏的/重复的条目直接跳过，
     免得一个脏数据把整次下线公告搞崩。
     """
     payload = await onebot.call("get_group_list", {}, timeout=timeout, check=True)
@@ -221,7 +221,7 @@ async def watch_stop_request(
     """等 `stop.request`；等到了就播报、写回执、置 stop_event。
 
     `prefs`：按每个群的「上下线推送」开关过滤；不传就发所有群。
-    即使 NapCat 连不上、公告发不出去，也要退出——主人按的是「关机器人」，
+    即使协议端连不上、公告发不出去，也要退出——主人按的是「关机器人」，
     不是「关给我看」。失败原因写进回执和日志。
     """
     request = request_path or STOP_REQUEST
@@ -241,7 +241,7 @@ async def watch_stop_request(
     except OSError as exc:  # noqa: BLE001
         log.warning("删不掉下线请求 %s：%s", request, exc)
 
-    log.info("收到下线请求：等连上 NapCat 后给每个群发告别")
+    log.info("收到下线请求：等连上协议端后给每个群发告别")
     report: dict[str, Any] = {
         "ok": False,
         "pid": os.getpid(),
@@ -262,7 +262,7 @@ async def watch_stop_request(
                 try:
                     await asyncio.wait_for(connected.wait(), timeout=connect_wait)
                 except asyncio.TimeoutError:
-                    raise ConnectionError(f"{connect_wait:g} 秒内没连上 NapCat") from None
+                    raise ConnectionError(f"{connect_wait:g} 秒内没连上协议端") from None
         groups = await fetch_groups(onebot)
         groups, skipped = push_groups(groups, prefs)
         if (

@@ -1,7 +1,7 @@
 """OneBot 11 正向 WebSocket 客户端。
 
-NapCat 是服务端（websocketServers，默认 3001），本程序是客户端连上去。
-一条连接同时承载：NapCat 推上来的事件 + 我们发下去的动作（按 echo 配对回应）。
+协议端（SnowLuma）是服务端（websocketServers，默认 3001），本程序是客户端连上去。
+一条连接同时承载：协议端推上来的事件 + 我们发下去的动作（按 echo 配对回应）。
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ EventHandler = Callable[[dict[str, Any]], Awaitable[None]]
 
 
 class OneBotError(RuntimeError):
-    """动作被 NapCat 明确拒了（status=failed / retcode≠0）。
+    """动作被协议端明确拒了（status=failed / retcode≠0）。
 
     和"连接断了"不是一回事：链路还在，只是这一条没被接受 —— 比如 QQ 侧
     网络异常（retcode=1200 + EventChecker Failed）、被风控、参数不对。
@@ -39,7 +39,7 @@ class OneBotError(RuntimeError):
 
 
 def _is_failed(payload: dict[str, Any]) -> bool:
-    """NapCat 的回执算不算失败。
+    """协议端的回执算不算失败。
 
     status=failed 一定失败；老实现只给 retcode，所以退一步看 retcode。
     retcode 缺省当成功（部分极简实现不返回它）。
@@ -84,7 +84,7 @@ class OneBot:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - 网络异常都要重连
-                log.warning("与 NapCat 的连接断开: %s", exc)
+                log.warning("与协议端的连接断开: %s", exc)
             finally:
                 self.connected.clear()
                 self._fail_pending()
@@ -148,13 +148,13 @@ class OneBot:
         *,
         check: bool = False,
     ) -> dict:
-        """调用 NapCat API，返回 {"status","retcode","data"}。
+        """调用协议端 API，返回 {"status","retcode","data"}。
 
-        check=True 时，NapCat 回 status=failed / retcode≠0 就抛 OneBotError。
+        check=True 时，协议端回 status=failed / retcode≠0 就抛 OneBotError。
         发送消息一定要开着：**"没抛异常"不等于"发出去了"**。
         """
         if self._ws is None or self._ws.closed:
-            raise ConnectionError("还没连上 NapCat")
+            raise ConnectionError("还没连上协议端")
 
         echo = str(next(self._ids))
         fut: asyncio.Future = asyncio.get_running_loop().create_future()

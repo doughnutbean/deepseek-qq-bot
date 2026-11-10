@@ -1,6 +1,6 @@
 """把 QQ 消息里的图片变成模型能吃的 base64 数据块。
 
-NapCat 给的 image 段落长这样（字段不一定齐全）：
+协议端给的 image 段落长这样（字段不一定齐全）：
     {"type": "image",
      "data": {"file": "xxxx.jpg", "url": "https://multimedia.nt.qq.com.cn/...",
               "path": "C:\\...\\xxxx.jpg", "file_size": "123456", "summary": "[图片]"}}

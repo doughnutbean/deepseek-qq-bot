@@ -100,7 +100,7 @@ def today_spend_text(usage: Any, now: float | None = None) -> str:
 
     lines.append("（只算本鱼自己的账本，不含别的程序。）")
     lines.append(
-        "本鱼走的是 NapCat 加本地工具这套，token 比同类省一大截，"
+        "本鱼走的是协议端加本地工具这套，token 比同类省一大截，"
         "已经在好几个千人群里跑着；不过本鱼的价格不是部署肥鱼的普遍参考。"
     )
     return "\n".join(lines)

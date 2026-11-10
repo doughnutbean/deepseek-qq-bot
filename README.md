@@ -3,7 +3,7 @@
 > 把 DeepSeek 接进 QQ 群的一套完整实现。不是「收到消息就转发给模型」的 demo，而是一个真在群里跑了几个月的搭子：有长期记忆、会记群里的说法、会发表情包、会陪看直播、会自己算今天花了多少钱。
 
 ```
-QQ 客户端（小号） ── NapCat ── OneBot 11 ── run.py ── DeepSeek API
+QQ 客户端（小号） ── SnowLuma ── OneBot 11 ── run.py ── DeepSeek API
                                     ↑
                             判断该不该回 / 调什么工具 / 记什么 / 花多少
 ```
@@ -39,12 +39,15 @@ QQ 客户端（小号） ── NapCat ── OneBot 11 ── run.py ── Dee
 
 | 角色 | 是什么 | 谁来做 |
 |---|---|---|
-| **协议端** | 冒充 QQ 客户端收发消息，翻译成标准协议 | [NapCat](https://github.com/NapNeko/NapCatQQ) |
+| **协议端** | 冒充 QQ 客户端收发消息，翻译成标准协议 | [SnowLuma](https://github.com/SnowLuma) 2.x（Docker 里跑 Linux QQ） |
 | **协议** | 一套约定好的 JSON 格式（收事件 / 发动作） | OneBot 11 |
 | **业务逻辑** | 判断该不该回、调模型、发回去 | 本仓库的 `run.py` |
 
-QQ 没给普通人开放个人号接口，NapCat 通过注入 QQNT 客户端把收发消息暴露成 WebSocket ——
-这是目前最主流也最稳的做法，代价是**违反 QQ 用户协议，有封号风险**（见文末）。
+QQ 没给普通人开放个人号接口。协议端通过注入 QQNT 客户端，把「收消息 / 发消息」暴露成
+OneBot 11 的 WebSocket —— 这是目前最主流的做法，代价是**违反 QQ 用户协议，有封号风险**（见文末）。
+
+线上用的是 **SnowLuma 2.x**。更早用的是 NapCat：本机被连续打「设备存在外挂」之后，
+整套搬到服务器，协议端也换成了 SnowLuma，现在不再用 NapCat。
 
 ---
 
@@ -57,15 +60,23 @@ QQ 没给普通人开放个人号接口，NapCat 通过注入 QQNT 客户端把�
 - 一个 DeepSeek API Key：在 [platform.deepseek.com](https://platform.deepseek.com/api_keys) 创建，充 10 块钱够玩很久
 - 一台常开的机器（自己电脑也行，关机就掉线）
 
-### 1. 装 NapCat 并登录
+### 1. 起协议端（SnowLuma）
 
-下载 [NapCat Releases](https://github.com/NapNeko/NapCatQQ/releases) 的
-`NapCat.Shell.Windows.OneKey.zip`（内置 QQ，不用另装），解压后双击 `napcat.bat`，
-日志里会有一行 `WebUI Local Panel Url`，浏览器打开它，用**小号**扫码登录。
+线上的形态是：**一个 Docker 容器里同时跑 Linux QQ 和 SnowLuma**，对外只暴露一个
+OneBot WebSocket。部署方式看 SnowLuma 自己的文档，跑起来之后容器里会开这几个口：
 
-### 2. 开 OneBot 接口（很多人卡在这）
+| 端口 | 干什么 |
+|---|---|
+| 3001 | OneBot WebSocket，机器人连这个 |
+| 5099 | WebUI，配 OneBot、看日志（只听 127.0.0.1） |
+| 6081 | noVNC，第一次扫码登录用（用完就关） |
 
-NapCat WebUI → 网络配置 → 新建 → **WebSocket 服务端**：
+第一次登录：打开 noVNC（或 WebUI 里的二维码），用**小号**扫一次。登录态存在容器卷里，
+之后重启容器会自动登录，不用反复扫。
+
+### 2. 开 OneBot 接口（关键一步，很多人卡在这）
+
+在 WebUI 里新建一个 **WebSocket 服务端**（有的版本叫「网络配置」）：
 
 | 配置项 | 填什么 |
 |---|---|
@@ -74,6 +85,20 @@ NapCat WebUI → 网络配置 → 新建 → **WebSocket 服务端**：
 | 消息格式 | `array` ← **必须是 array**，`string` 是 CQ 码老格式 |
 | Token | 本机自用可留空；**公网部署必须设** |
 | 启用 | 勾上「保存时启用」 |
+
+保存后，浏览器访问 `http://127.0.0.1:3001` 能看到响应就说明通了。
+
+改完 OneBot 配置只需要重启协议端这一层，**QQ 不会掉线**：
+
+```bash
+docker exec snowluma supervisorctl restart snowluma
+```
+
+> **为什么是「服务端」？** 因为要**你的程序**去连协议端。反过来（协议端当客户端连你）
+> 叫「反向 WS」，适合机器人跑在云上、协议端跑在本机的情况。本仓库按正向 WS 写的，
+> 想反过来就改 `.env` 里的 `ONEBOT_WS_URL`，代码不用动。
+>
+> **换别的 OneBot 11 实现也能接**：正向 WS、`array` 格式、端口对得上就行。
 
 ### 3. 配 `.env`
 
@@ -101,7 +126,7 @@ INFO qqbot.onebot | 已连上 OneBot: ws://127.0.0.1:3001
 ### 5. 没 Key 也能先验链路
 
 ```powershell
-# 终端 1：假 NapCat，把收到的消息打印出来
+# 终端 1：假协议端，把收到的消息打印出来
 python tools/mock_napcat.py
 
 # 终端 2：不调真模型，只回显
@@ -194,7 +219,7 @@ deepseek-qq-bot/
 
 - **个人号路线违反 QQ 用户协议，有封号风险。** 自己玩、小群自用可以，**别拿常用大号试**。
   想长期稳定就转 QQ 开放平台，业务逻辑那层（`app.py`）基本可以原样保留。
-- **公网部署必须给 NapCat 设 Token**，否则等于把发消息的权限挂在公网上。
+- **公网部署必须给协议端设 Token**，否则等于把发消息的权限挂在公网上。
 - **别把群聊数据提交进仓库。** `.gitignore` 挡住了 `data/`、日志和数据库，
   但你自己新加的文件要自己看一眼：群号、QQ 号、聊天记录都不该进公开仓库。
 

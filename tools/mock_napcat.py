@@ -1,4 +1,4 @@
-"""本地假 NapCat：不装 QQ、不花钱，先把整条链路跑通。
+"""本地假协议端（OneBot 11）：不装 QQ、不花钱，先把整条链路跑通。
 
 用法（两个终端）：
     终端 1: python tools/mock_napcat.py
@@ -95,7 +95,7 @@ async def ws_handler(request: web.Request) -> web.WebSocketResponse:
 
 
 async def health(_: web.Request) -> web.Response:
-    return web.Response(text="mock napcat running")
+    return web.Response(text="mock onebot running")
 
 
 def main() -> None:

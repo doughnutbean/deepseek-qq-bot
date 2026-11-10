@@ -1259,7 +1259,7 @@ class Bot(LiveDomain):
         # 不然她会一本正经地说「这张不是本鱼发的呀」（2026-10-27 实锤）。
         self._sticker_sent: dict[str, dict[str, float]] = {}
         # 实际在哪些群：主人问「那个新群你进去了吗」时按这个答。
-        # (取列表的时间, [群 dict])，120 秒内复用，别每句都问 NapCat。
+        # (取列表的时间, [群 dict])，120 秒内复用，别每句都问协议端。
         self._group_list_cache: tuple[float, list[dict[str, Any]]] = (0.0, [])
         # 主人临时待办：只存内存，重启就清空（故意不落盘，见 qqbot/todo.py）
         self.todo = TodoList()
@@ -1642,7 +1642,7 @@ class Bot(LiveDomain):
 
         好友上线通知只给 QQ 好友开，所以这个结果是硬门槛：
         取不到列表就按"查不了"处理，宁可不给开，也别把陌生人放进来。
-        缓存 10 分钟，同一次启动里不用每条指令都问 NapCat。
+        缓存 10 分钟，同一次启动里不用每条指令都问协议端。
         """
         now = time.monotonic()
         if (
@@ -3457,7 +3457,7 @@ class Bot(LiveDomain):
 
         2026-10-27 实锤：她 01:59 进了群，两分钟后主人问「那个新群你进去了吗」，
         她只能顺着主人的话猜。`group_invites.joined` 只记她点过同意的那些；
-        这个列表是 NapCat 的实况，两边一起给才答得准。只在主人私聊、且这句
+        这个列表是协议端的实况，两边一起给才答得准。只在主人私聊、且这句
         话提到「群 / 进 / 拉 / 邀请」时才查，别每句都问，列表 120 秒内复用。
         """
         if not text or not self._GROUP_ASK_RE.search(text):
@@ -5660,7 +5660,7 @@ class Bot(LiveDomain):
     async def _on_request(self, event: dict[str, Any]) -> None:
         """request 事件：好友申请 / 群邀请（邀请她进群）。
 
-        NapCat 经常把好友申请当成普通私聊推过来（见 ``private_requests.py``），
+        协议端经常把好友申请当成普通私聊推过来（见 ``private_requests.py``），
         所以 ``_handle_private_request`` 才是主路径；这里处理真正的 request 事件。
 
         好友：批不批看开关 + 档位 + 最近互动 + 好感 + 当天额度。不够熟的不点
@@ -5859,12 +5859,12 @@ class Bot(LiveDomain):
             )
             log.warning("主人同意，但点同意失败 %s(%s)，等重拉", nick, uid)
             return True
-        # 没有 flag：NapCat 把邀请当普通私聊推了，只能请他重拉
+        # 没有 flag：协议端把邀请当普通私聊推了，只能请他重拉
         self.group_invites.preapprove(uid, gid)
         await self._send_private_text(uid, GROUP_INVITE_REINVITE)
         await self._send_private_text(
             user_id,
-            "这次没有可点的「同意」（NapCat 把邀请当普通私聊推了）。"
+            "这次没有可点的「同意」（协议端把邀请当普通私聊推了）。"
             "本鱼让他重新发一次，拉进来就自动同意。",
         )
         log.info("主人同意 %s(%s) 的群邀请，但没有 flag，等重拉", nick, uid)
@@ -6164,7 +6164,7 @@ class Bot(LiveDomain):
         # 这是在答应，不是收尾。不点破的话，模型很容易只回一句「可以就好」就没了。
         quote_hint = _quoted_offer_hint(quoted_text, quoted_uid, self_id, text)
 
-        # 积压消息：电脑休眠/掉线之后回连，NapCat 会把那段时间的消息一次性推过来。
+        # 积压消息：电脑休眠/掉线之后回连，协议端会把那段时间的消息一次性推过来。
         # 这时候再回，等于在一场早就结束的对话里插嘴 —— 直接跳过。
         # 上线补收（catchup.py）拉回来的消息带 _catchup，要放行：那是有意补的。
         event_time = event.get("time")
@@ -6338,7 +6338,7 @@ class Bot(LiveDomain):
 
         # ---------- 合并转发：先把记录读成文字 ----------
         #
-        # 这一步只调 NapCat 的 get_forward_msg，不花 token。读到的正文只给模型
+        # 这一步只调协议端的 get_forward_msg，不花 token。读到的正文只给模型
         # 和本轮提示词用；群语料、事实抽取、长期记忆都仍然用 raw_text，避免把
         # 转发里别人的话记成当前说话人的事实，也避免把几万字塞进 embedding。
         forward_result: ForwardResult | None = None
@@ -8839,12 +8839,12 @@ class Bot(LiveDomain):
         now = time.time() if now is None else now
         if now < getattr(self, "_report_retry_at", 0.0):
             return False
-        # 启动顺序是「起后台任务 → 连 NapCat」，所以刚开机那几秒还没连上。
+        # 启动顺序是「起后台任务 → 连协议端」，所以刚开机那几秒还没连上。
         # 这时候先别发：不然会在日志里留一条吓人的 ConnectionError，
         # 还要白等 5 分钟退避。连上之后下一轮（30 秒内）自然就发了。
         conn = getattr(self.onebot, "connected", None)
         if conn is not None and not conn.is_set():
-            log.debug("日报等 NapCat 连上再发")
+            log.debug("日报等协议端连上再发")
             return False
         due, why = self.daily_report.due(now)
         if not due:
@@ -8866,10 +8866,10 @@ class Bot(LiveDomain):
             )
         except ConnectionError:
             # 刚好撞上断线重连：下一轮（30 秒）就再试，不要一上来就退避 5 分钟
-            log.warning("日报没发出去：NapCat 连接刚断，稍后再试")
+            log.warning("日报没发出去：协议端连接刚断，稍后再试")
             return False
         except OneBotError as exc:
-            # NapCat 明确回了失败（QQ 侧网络异常、被风控……）。
+            # 协议端明确回了失败（QQ 侧网络异常、被风控……）。
             # 关键：**不能**记成已发，否则今天一整天都不会再试了。
             self._report_retry_at = now + 300
             log.warning("日报没发出去：%s（5 分钟后再试）", exc)
